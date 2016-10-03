@@ -1,0 +1,15 @@
+{
+
+  "manifest_version": 2,
+  "name": "Image search extension",
+  "version": "1.0",
+
+  "description": "This extension shows a Google Image search result for the current page.",
+
+  "content_scripts": [
+    {
+      "matches": [ "http://*/*", "https://*/*" ],
+      "js": ["content.js"]
+    }
+  ]
+}
