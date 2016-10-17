@@ -152,6 +152,7 @@ chrome.runtime.onMessage.addListener(
     }
     else if(request.runState === 'getState'){       
       sendResponse({runState: val});     
+      console.log('Message to event page was: ', request);
     }
     else{
       console.log('Message to event page was not handled: ', request);

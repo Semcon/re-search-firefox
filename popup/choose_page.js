@@ -3,12 +3,10 @@ function clickHandler(e) {
       console.log("Run state is: " , response.runState);
       var runState = response.runState;
       if(runState === 'enabled'){
-        console.log('value',document.getElementsByName("stateBtn")[0].childNodes[0].nodeValue);
         var btn = document.getElementsByName("stateBtn")[0];
         btn.childNodes[0].nodeValue = 'ON';
       }
       else if(runState === 'disabled'){
-        console.log(document.getElementsByName("stateBtn")[0].childNodes[0].nodeValue);
         var btn = document.getElementsByName("stateBtn")[0];
         btn.childNodes[0].nodeValue = 'OFF';
       }
