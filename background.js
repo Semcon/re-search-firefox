@@ -40,7 +40,8 @@ function showWindows(request){
     console.log('Link: ' , link);
     chrome.windows.getCurrent( {}, function( window ){
         console.log( window );
-        chrome.windows.create( {
+         saveWindowInfo(window);
+         chrome.windows.create( {
           height: parseInt(window.height),
           left: parseInt(window.width / 2 + 8),
           state: 'normal',
@@ -60,6 +61,20 @@ function showWindows(request){
   else{
     console.log('currentURL and/or currentTerms is undefined');
   }
+}
+
+function saveWindowInfo(window){
+  //store old window size
+  console.log("1");
+      var mainWindowWidth                = window.width;
+      var mainWindowHeight               = window.height;
+      var windowID                       = window.id;
+      var mainWindowDict                 = {};
+      mainWindowDict["mainWindowHeight"] = mainWindowHeight;
+      mainWindowDict["mainWindowWidth"]  = mainWindowWidth;
+      mainWindowDict["windowID"]        = windowID;
+      localStorage.setItem('mainWindowDict', JSON.stringify(mainWindowDict)); 
+      console.log(localStorage.getItem("mainWindowDict"));
 }
 
 
