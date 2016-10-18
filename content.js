@@ -34,6 +34,11 @@ function init(){
   console.log('In init');
   chrome.runtime.sendMessage({selector: "selector", url: window.location.href}, function(response) {
     if(response.selector !== false){
+      //store old window size
+      var oldwidth  = window.outerWidth;
+      var oldheight = window.outerHeight;
+      localStorage.setItem('oldwidth', oldwidth); 
+      localStorage.setItem('oldheight', oldheight); 
       getSearchTerm(response.selector);
     }
     else{
