@@ -15,20 +15,37 @@ function sendText( text ){
 }
 
 function getSearchTerm(selector){
-  console.log('Selector: ', selector);
-  elements = document.querySelectorAll(selector);
-  if( elements.length === 0 ){
-    setTimeout( init, 100 );
-    return false;
-  }
-  var element = elements[ 0 ];
+ console.log('Selector: ', selector);
+ elements = document.querySelectorAll(selector);
+ if( elements.length === 0 ){
+   setTimeout( init, 100 );
+   return false;
+ }
+ var element = elements[ 0 ];
 
-  if( element.value.length > 0 ){
-     sendText( element.value );
-  }
-  element.addEventListener( 'input', function( event ){
-     sendText( event.target.value );
-  });
+ if( element.value.length > 0 ){
+    sendText( element.value );
+ }
+/*  element.addEventListener( 'input', function( event ){
+    sendText( event.target.value );
+ });*/
+
+ element.addEventListener("keyup", function(event) {
+     console.log('went in to eventlistener');
+     event.preventDefault();
+     if (event.keyCode == 13) {
+         alert('it works!');
+     }
+ });
+
+ document.querySelectorAll('.lsb')[0].addEventListener('click', function (e) {
+     console.log('went into function');
+     sendText(element.value);
+     var key = e.which || e.keyCode;
+     if (key === 13) { // 13 is enter
+       alert('enter or search button was pressed');
+     }
+ });
 }
 
 function init(){
