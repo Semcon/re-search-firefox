@@ -12,12 +12,19 @@ console.log('background is running');
 //If runState is undefined it is gets set to enabled otherwise it gets the value.
 
 currentState = localStorage.getItem("runState");
-console.log('currentState: ', currentState);
+
+if (doLog) {
+  console.log('currentState: ', currentState);
+}
+
 if (currentState === null) {
   localStorage.setItem('runState', 'enabled')
-  console.log('Saved', 'runState', 'enabled');
+  if (doLog) {
+    console.log('Saved', 'runState', currentState);
+  }
   currentState = 'enabled';
 }
+
 
 
 var xhr = new XMLHttpRequest();
@@ -33,13 +40,13 @@ xhr.send();
 function showWindows(request) {
   if (typeof currentURL !== 'undefined' && typeof currentTerms !== 'undefined') {
     var link = currentURL + currentTerms[request];
-    if( doLog ){
-            console.log( 'Link: ' , link );
-        }
+    if (doLog) {
+      console.log('Link: ', link);
+    }
     chrome.windows.getCurrent({}, function(window) {
-      if( doLog ){
-                console.log( window );
-            }
+      if (doLog) {
+        console.log(window);
+      }
 
       saveWindowInfo(window);
       chrome.windows.create({
@@ -59,9 +66,9 @@ function showWindows(request) {
       });
     });
   } else {
-     if( doLog ){
-            console.log( 'currentURL and/or currentTerms is undefined' );
-        }
+    if (doLog) {
+      console.log('currentURL and/or currentTerms is undefined');
+    }
   }
 }
 
@@ -84,6 +91,8 @@ function saveWindowInfo(window) {
 function getSelector(request, sender, sendResponse) {
   //content script is asking for selector
   var url = request.url;
+  var currentEngine;
+
   // Loop over all engines
   if (typeof jsonData !== 'undefined' && typeof url !== 'undefined') {
     for (var i = 0; i < jsonData.engines.length; i = i + 1) {
@@ -106,28 +115,24 @@ function getSelector(request, sender, sendResponse) {
           console.log('Valid site');
         }
 
-        var engineTerms = jsonData.engines[i].terms;
-        var englishTerms = jsonData.terms[engineTerms].eng;
-        var currentLanguage = jsonData.engines[i].language;
-        currentTerms = jsonData.terms[engineTerms][currentLanguage];
-        currentURL = jsonData.engines[i].url;
-        var selectorInput = jsonData.engines[i].selectors.input;
-        var selectorBtn;
-        var selectorAutoCmpl;
+        currentEngine = jsonData.engines[i];
 
-        if (jsonData.engines[i].selectors.hasOwnProperty('button')) {
-          selectorBtn = jsonData.engines[i].selectors.button;
+        //  var engine = jsonData.engines[i].terms;
+        //  var englishTerms = jsonData.terms[engine].eng;
+        //  var currentLanguage = jsonData.engines[i].language;
+        //  var selectorInput = jsonData.engines[i].selectors.input;
+        currentTerms = [];
+        for (var key in jsonData.terms[currentEngine.terms]) {
+          currentTerms.push(jsonData.terms[currentEngine.terms][key]);
         }
 
-        if (jsonData.engines[i].selectors.hasOwnProperty('autocomplete')) {
-          selectorAutoCmpl = jsonData.engines[i].selectors.autocomplete;
-        }
+        currentURL = currentEngine.url;
 
         sendResponse({
-          selectorSearchField: selectorInput,
-          selectorButton: selectorBtn,
-          selectorAutoComplete: selectorAutoCmpl,
-          terms: currentTerms
+          selectorSearchField: currentEngine.selectors.input,
+          selectorButton: currentEngine.selectors.button,
+          selectorAutoComplete: currentEngine.selectors.autocomplete,
+          englishTerms: jsonData.terms[currentEngine.terms].eng
         });
 
         return true;
@@ -144,100 +149,152 @@ function getSelector(request, sender, sendResponse) {
   }
 }
 
+function getSelector(request, sender, sendResponse) {
+  //content script is asking for selector
+  var url = request.url;
+  var currentEngine;
 
+  // Loop over all engines
+  if (typeof jsonData !== 'undefined' && typeof url !== 'undefined') {
+    for (var i = 0; i < jsonData.engines.length; i = i + 1) {
+      var matchCount = 0;
+
+      // Loop over all required matches for the engine
+      for (var matchIndex = 0; matchIndex < jsonData.engines[i].match.length; matchIndex = matchIndex + 1) {
+        if (url.indexOf(jsonData.engines[i].match[matchIndex]) > -1) {
+          // We have a match, increment our counter
+          matchCount = matchCount + 1;
+          if (doLog) {
+            console.log('found match, matchCount: ', matchCount);
+          }
+        }
+      }
+
+      // If we have the same number of matches as required matches we have a valid site
+      if (matchCount === jsonData.engines[i].match.length) {
+        if (doLog) {
+          console.log('Valid site');
+        }
+
+        currentEngine = jsonData.engines[i];
+
+        //  var engine = jsonData.engines[i].terms;
+        //  var englishTerms = jsonData.terms[engine].eng;
+        //  var currentLanguage = jsonData.engines[i].language;
+        //  var selectorInput = jsonData.engines[i].selectors.input;
+        currentTerms = [];
+        for (var key in jsonData.terms[currentEngine.terms]) {
+          currentTerms.push(jsonData.terms[currentEngine.terms][key]);
+        }
+
+        currentURL = currentEngine.url;
+
+        sendResponse({
+          selectorSearchField: currentEngine.selectors.input,
+          selectorButton: currentEngine.selectors.button,
+          selectorAutoComplete: currentEngine.selectors.autocomplete,
+          englishTerms: jsonData.terms[currentEngine.terms].eng
+        });
+
+        return true;
+      }
+    }
+
+    if (doLog) {
+      console.log('If not valid site, Url:', url);
+    }
+
+    sendResponse({
+      selectorSearchField: false
+    });
+  }
+}
 
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
-    //content script asks if extension is on/off
-    if (request.runState === '?') {
-
-      console.log(localStorage.getItem("runState"))
-      var value = localStorage.getItem("runState")
+    //From content script
+    if (request.action === 'getRunState') {
+      rState = localStorage.getItem("runState");
       sendResponse({
-        "runState": value
-      })
-    }
-
-    //content script is asking for selector
-    else if (request.selector === 'selector') {
-      getSelector(request, sender, sendResponse);
-    }
-
-
-
-    //content script is sending terms
-    else if (typeof currentTerms !== 'undefined' && currentTerms.hasOwnProperty(request)) {
-      console.log('term is found');
-      sendResponse({
-        status: 'term was found'
+        runState: rState
       });
-      showWindows(request);
-    }
-
-    //From popup
-    else if (request.runState === 'changeState') {
-      console.log('ChangeState from popup / current value is: ', currentState);
-      if (currentState === 'enabled') {
-        localStorage.setItem('runState', 'disabled');
-        console.log('Saved', 'runState', 'disabled');
-        currentState = 'disabled';
-        chrome.tabs.query({
-          active: true,
-          currentWindow: true
-        }, function(tabs) {
-          chrome.tabs.sendMessage(tabs[0].id, {
-            runState: "disabled"
-          }, function(response) {
-            console.log("response is: ", response);
-            console.log(response.message);
-            if (response) {
-              console.log(response.message);
-            } else {
-              if( doLog ){
-                        console.log(response.message);
-                        console.log('Content script not injected');
-                    }
 
 
+    } else if (request.action === 'getSelector') {
+      getSelector(request, sender, sendResponse);
+    } else if (request.action === 'searchForTerm') {
+      if (typeof currentTerms !== 'undefined') {
+        for (var i = 0; i < currentTerms.length; i++) {
+          if (currentTerms[i].hasOwnProperty(request.term)) {
+            if (doLog) {
+              console.log('term is found', request);
             }
-          });
-        });
-        sendResponse({
-          runState: currentState
-        });
 
-      } else if (currentState === 'disabled') {
-        localStorage.setItem('runState', 'enabled')
-        console.log('Saved', 'runState', 'enabled');
-        currentState = 'enabled';
-        chrome.tabs.query({
-          active: true,
-          currentWindow: true
-        }, function(tabs) {
-          chrome.tabs.sendMessage(tabs[0].id, {
-            runState: "enabled"
-          }, function(response) {
-            if (response) {
-              console.log(response.message);
-              console.log("Content script injected");
-            } else {
-              console.log('Content script not injected');
-            }
-          });
-        });
-        sendResponse({
-          runState: currentState
-        });
+            sendResponse({
+              status: 'term was found'
+            });
+
+            showWindows(request, i);
+          }
+        }
       }
-    } else if (request.runState === 'getState') {
+
+      //From popup
+    } else if (request.action === 'changeRunState') {
+
+      if (doLog) {
+        console.log('ChangeRunState from popup / current value is: ', currentState);
+      }
+
+      if (currentState === 'enabled') {
+        currentState = 'disabled';
+      } else {
+        currentState = 'enabled';
+      }
+
+      chrome.storage.sync.set({
+          runState: currentState
+        },
+        function() {
+          if (doLog) {
+            console.log('Saved', 'runState', currentState);
+          }
+
+          chrome.tabs.query({
+            active: true,
+            currentWindow: true
+          }, function(tabs) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: 'changeRunState',
+              runState: currentState
+            }, function(response) {
+              if (response) {
+                if (doLog) {
+                  console.log(response.message);
+                }
+              } else {
+                if (doLog) {
+                  console.log('Content script not injected');
+                }
+              }
+            });
+          });
+
+          sendResponse({
+            runState: currentState
+          });
+        }
+      );
+    } else if (request.action === 'getRunState') {
       sendResponse({
         runState: currentState
       });
-      console.log('Message to event page was: ', request);
-      console.log("request.runstate is: ", request.runState);
     } else {
-      console.log('Message to event page was not handled: ', request);
-      console.log("request.runstate is: ", request.runState);
+      if (doLog) {
+        console.log('Message to event page was not handled: ', request);
+      }
     }
+
     return true;
-  });
+  }
+);
