@@ -1,9 +1,8 @@
-(function(){
+
 var runState;
 var runInit = true;
 var elements;
 var runSetUI = true;
-//var tabs = require('sdk/tabs');
 
 function sendText( text ){
   if(runState === 'enabled' && typeof text !== 'undefined'){
@@ -173,5 +172,4 @@ chrome.runtime.onMessage.addListener(
             }
             return true;
         }
-    );
-}})();
+    );}

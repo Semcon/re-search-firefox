@@ -1,30 +1,27 @@
-var val = "";
-var jsonTermsGoogle;
-var jsonTermsBing;
-var googleURL;
-var bingURL;
+var val = '';
 var currentTerms;
 var currentURL;
 var jsonData;
 var doLog = false;
 
+var DATA_URL = 'https://api.myjson.com/bins/4e30w';
 
 console.log('background is running');
 
 //First time running script to check what value runState is in chrome storage.
 //If runState is undefined it is gets set to enabled otherwise it gets the value.
 
-val = localStorage.getItem("runState");
-console.log('val: ', val);
-if (val === null) {
+currentState = localStorage.getItem("runState");
+console.log('currentState: ', currentState);
+if (currentState === null) {
   localStorage.setItem('runState', 'enabled')
   console.log('Saved', 'runState', 'enabled');
-  val = 'enabled';
+  currentState = 'enabled';
 }
 
 
 var xhr = new XMLHttpRequest();
-xhr.open("GET", 'https://api.myjson.com/bins/4e30w', true);
+xhr.open("GET", DATA_URL, true);
 xhr.onreadystatechange = function() {
   if (xhr.readyState === 4 && xhr.status === 200) {
     jsonData = JSON.parse(xhr.responseText);
@@ -36,9 +33,14 @@ xhr.send();
 function showWindows(request) {
   if (typeof currentURL !== 'undefined' && typeof currentTerms !== 'undefined') {
     var link = currentURL + currentTerms[request];
-    console.log('Link: ', link);
+    if( doLog ){
+            console.log( 'Link: ' , link );
+        }
     chrome.windows.getCurrent({}, function(window) {
-      console.log(window);
+      if( doLog ){
+                console.log( window );
+            }
+
       saveWindowInfo(window);
       chrome.windows.create({
         height: parseInt(window.height),
@@ -57,7 +59,9 @@ function showWindows(request) {
       });
     });
   } else {
-    console.log('currentURL and/or currentTerms is undefined');
+     if( doLog ){
+            console.log( 'currentURL and/or currentTerms is undefined' );
+        }
   }
 }
 
@@ -103,6 +107,7 @@ function getSelector(request, sender, sendResponse) {
         }
 
         var engineTerms = jsonData.engines[i].terms;
+        var englishTerms = jsonData.terms[engineTerms].eng;
         var currentLanguage = jsonData.engines[i].language;
         currentTerms = jsonData.terms[engineTerms][currentLanguage];
         currentURL = jsonData.engines[i].url;
@@ -171,11 +176,11 @@ chrome.runtime.onMessage.addListener(
 
     //From popup
     else if (request.runState === 'changeState') {
-      console.log('ChangeState from popup / current value is: ', val);
-      if (val === 'enabled') {
+      console.log('ChangeState from popup / current value is: ', currentState);
+      if (currentState === 'enabled') {
         localStorage.setItem('runState', 'disabled');
         console.log('Saved', 'runState', 'disabled');
-        val = 'disabled';
+        currentState = 'disabled';
         chrome.tabs.query({
           active: true,
           currentWindow: true
@@ -183,22 +188,28 @@ chrome.runtime.onMessage.addListener(
           chrome.tabs.sendMessage(tabs[0].id, {
             runState: "disabled"
           }, function(response) {
+            console.log("response is: ", response);
+            console.log(response.message);
             if (response) {
               console.log(response.message);
             } else {
-              console.log(response.message);
-              console.log('Content script not injected');
+              if( doLog ){
+                        console.log(response.message);
+                        console.log('Content script not injected');
+                    }
+
+
             }
           });
         });
         sendResponse({
-          runState: val
+          runState: currentState
         });
 
-      } else if (val === 'disabled') {
+      } else if (currentState === 'disabled') {
         localStorage.setItem('runState', 'enabled')
         console.log('Saved', 'runState', 'enabled');
-        val = 'enabled';
+        currentState = 'enabled';
         chrome.tabs.query({
           active: true,
           currentWindow: true
@@ -215,12 +226,12 @@ chrome.runtime.onMessage.addListener(
           });
         });
         sendResponse({
-          runState: val
+          runState: currentState
         });
       }
     } else if (request.runState === 'getState') {
       sendResponse({
-        runState: val
+        runState: currentState
       });
       console.log('Message to event page was: ', request);
       console.log("request.runstate is: ", request.runState);
