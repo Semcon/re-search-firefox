@@ -3,7 +3,6 @@ var currentTerms;
 var currentURL;
 var jsonData;
 var doLog = false;
-
 var DATA_URL = 'https://api.myjson.com/bins/4e30w';
 
 console.log('background is running');
@@ -252,49 +251,47 @@ chrome.runtime.onMessage.addListener(
         currentState = 'enabled';
       }
 
-      chrome.storage.sync.set({
+      localStorage.setItem('runState', currentState);
+      if (doLog) {
+        console.log('Saved', 'runState', currentState);
+      }
+
+
+      chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      }, function(tabs) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: 'changeRunState',
           runState: currentState
-        },
-        function() {
-          if (doLog) {
-            console.log('Saved', 'runState', currentState);
+        }, function(response) {
+          if (response) {
+            if (doLog) {
+              console.log(response.message);
+            }
+          } else {
+            if (doLog) {
+              console.log('Content script not injected');
+            }
           }
+        });
+      });
 
-          chrome.tabs.query({
-            active: true,
-            currentWindow: true
-          }, function(tabs) {
-            chrome.tabs.sendMessage(tabs[0].id, {
-              action: 'changeRunState',
-              runState: currentState
-            }, function(response) {
-              if (response) {
-                if (doLog) {
-                  console.log(response.message);
-                }
-              } else {
-                if (doLog) {
-                  console.log('Content script not injected');
-                }
-              }
-            });
-          });
-
-          sendResponse({
-            runState: currentState
-          });
-        }
-      );
-    } else if (request.action === 'getRunState') {
       sendResponse({
         runState: currentState
       });
-    } else {
-      if (doLog) {
-        console.log('Message to event page was not handled: ', request);
-      }
     }
-
-    return true;
+  
+else if (request.action === 'getRunState') {
+  sendResponse({
+    runState: currentState
+  });
+} else {
+  if (doLog) {
+    console.log('Message to event page was not handled: ', request);
   }
+}
+
+return true;
+}
 );
