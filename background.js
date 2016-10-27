@@ -2,7 +2,10 @@ var val = '';
 var currentTerms;
 var currentURL;
 var jsonData;
-var doLog = false;
+var doLog = true;
+var alternateWindow = false;
+var windowBeforeUpdateState = false;
+
 var DATA_URL = 'https://api.myjson.com/bins/4e30w';
 
 console.log('background is running');
@@ -25,6 +28,23 @@ if (currentState === null) {
 }
 
 
+chrome.windows.onRemoved.addListener(function(windowId) {
+  if (doLog) {
+    console.log('Window removed', windowId);
+  }
+
+  if (windowId === alternateWindow.id) {
+    chrome.windows.update(windowBeforeUpdateState.id, {
+      left: windowBeforeUpdateState.left,
+      top: windowBeforeUpdateState.top,
+      width: windowBeforeUpdateState.width,
+      height: windowBeforeUpdateState.height,
+      focused: windowBeforeUpdateState.focused
+    });
+    alternateWindow = false;
+  }
+});
+
 
 var xhr = new XMLHttpRequest();
 xhr.open("GET", DATA_URL, true);
@@ -36,9 +56,9 @@ xhr.onreadystatechange = function() {
 xhr.send();
 
 
-function showWindows(request) {
+function showWindows(request, index) {
   if (typeof currentURL !== 'undefined' && typeof currentTerms !== 'undefined') {
-    var link = currentURL + currentTerms[request];
+    var link = currentURL + currentTerms[index][request.term];
     if (doLog) {
       console.log('Link: ', link);
     }
@@ -47,22 +67,46 @@ function showWindows(request) {
         console.log(window);
       }
 
-      saveWindowInfo(window);
-      chrome.windows.create({
-        height: parseInt(window.height),
-        left: parseInt(window.width / 2 + 8),
-        state: 'normal',
-        top: parseInt(0),
-        type: 'normal',
-        url: link,
-        width: parseInt(window.width / 2 + 8)
-      });
+      console.log("alternateWindow is: ", alternateWindow);
+      if (alternateWindow === false) {
+        windowBeforeUpdateState = window;
 
-      chrome.windows.update(window.id, {
-        height: parseInt(window.height),
-        state: 'normal',
-        width: parseInt(window.width / 2 + 8)
-      });
+        chrome.windows.create({
+          height: parseInt(window.height, 10),
+          left: Math.max( 0, parseInt(window.left + (window.width / 2), 10)),
+          state: 'normal',
+          top: Math.max( 0, parseInt( window.top, 10 ) ),
+          type: 'normal',
+          url: link,
+          width: parseInt(window.width / 2, 10),
+
+        }, function(createdWindowData) {
+          alternateWindow = createdWindowData;
+          console.log("created window");
+        });
+
+        chrome.windows.update(window.id, {
+          state: 'normal',
+          width: parseInt(window.width / 2, 10)
+        });
+
+      } else {
+        if (doLog) {
+          console.log('Should update alternate window');
+        }
+
+        chrome.tabs.query({
+          active: true,
+          windowId: alternateWindow.id
+        }, function(tabs) {
+          console.log("tabs is: ", tabs);
+          chrome.tabs.update(tabs[0].id, {
+            url: link
+          });
+        });
+      }
+
+
     });
   } else {
     if (doLog) {
@@ -71,32 +115,14 @@ function showWindows(request) {
   }
 }
 
-function saveWindowInfo(window) {
-  //store old window size
-  console.log("1");
-  var mainWindowWidth = window.width;
-  var mainWindowHeight = window.height;
-  var windowID = window.id;
-  var mainWindowDict = {};
-  mainWindowDict["mainWindowHeight"] = mainWindowHeight;
-  mainWindowDict["mainWindowWidth"] = mainWindowWidth;
-  mainWindowDict["windowID"] = windowID;
-  localStorage.setItem('mainWindowDict', JSON.stringify(mainWindowDict));
-  console.log(localStorage.getItem("mainWindowDict"));
-}
-
-
-
 function getSelector(request, sender, sendResponse) {
   //content script is asking for selector
   var url = request.url;
   var currentEngine;
-
   // Loop over all engines
   if (typeof jsonData !== 'undefined' && typeof url !== 'undefined') {
     for (var i = 0; i < jsonData.engines.length; i = i + 1) {
       var matchCount = 0;
-
       // Loop over all required matches for the engine
       for (var matchIndex = 0; matchIndex < jsonData.engines[i].match.length; matchIndex = matchIndex + 1) {
         if (url.indexOf(jsonData.engines[i].match[matchIndex]) > -1) {
@@ -107,107 +133,35 @@ function getSelector(request, sender, sendResponse) {
           }
         }
       }
-
       // If we have the same number of matches as required matches we have a valid site
       if (matchCount === jsonData.engines[i].match.length) {
         if (doLog) {
           console.log('Valid site');
         }
-
         currentEngine = jsonData.engines[i];
-
-        //  var engine = jsonData.engines[i].terms;
-        //  var englishTerms = jsonData.terms[engine].eng;
-        //  var currentLanguage = jsonData.engines[i].language;
-        //  var selectorInput = jsonData.engines[i].selectors.input;
         currentTerms = [];
         for (var key in jsonData.terms[currentEngine.terms]) {
           currentTerms.push(jsonData.terms[currentEngine.terms][key]);
         }
-
         currentURL = currentEngine.url;
-
         sendResponse({
           selectorSearchField: currentEngine.selectors.input,
           selectorButton: currentEngine.selectors.button,
           selectorAutoComplete: currentEngine.selectors.autocomplete,
           englishTerms: jsonData.terms[currentEngine.terms].eng
         });
-
         return true;
       }
     }
-
     if (doLog) {
       console.log('If not valid site, Url:', url);
     }
-
     sendResponse({
       selectorSearchField: false
     });
   }
 }
 
-function getSelector(request, sender, sendResponse) {
-  //content script is asking for selector
-  var url = request.url;
-  var currentEngine;
-
-  // Loop over all engines
-  if (typeof jsonData !== 'undefined' && typeof url !== 'undefined') {
-    for (var i = 0; i < jsonData.engines.length; i = i + 1) {
-      var matchCount = 0;
-
-      // Loop over all required matches for the engine
-      for (var matchIndex = 0; matchIndex < jsonData.engines[i].match.length; matchIndex = matchIndex + 1) {
-        if (url.indexOf(jsonData.engines[i].match[matchIndex]) > -1) {
-          // We have a match, increment our counter
-          matchCount = matchCount + 1;
-          if (doLog) {
-            console.log('found match, matchCount: ', matchCount);
-          }
-        }
-      }
-
-      // If we have the same number of matches as required matches we have a valid site
-      if (matchCount === jsonData.engines[i].match.length) {
-        if (doLog) {
-          console.log('Valid site');
-        }
-
-        currentEngine = jsonData.engines[i];
-
-        //  var engine = jsonData.engines[i].terms;
-        //  var englishTerms = jsonData.terms[engine].eng;
-        //  var currentLanguage = jsonData.engines[i].language;
-        //  var selectorInput = jsonData.engines[i].selectors.input;
-        currentTerms = [];
-        for (var key in jsonData.terms[currentEngine.terms]) {
-          currentTerms.push(jsonData.terms[currentEngine.terms][key]);
-        }
-
-        currentURL = currentEngine.url;
-
-        sendResponse({
-          selectorSearchField: currentEngine.selectors.input,
-          selectorButton: currentEngine.selectors.button,
-          selectorAutoComplete: currentEngine.selectors.autocomplete,
-          englishTerms: jsonData.terms[currentEngine.terms].eng
-        });
-
-        return true;
-      }
-    }
-
-    if (doLog) {
-      console.log('If not valid site, Url:', url);
-    }
-
-    sendResponse({
-      selectorSearchField: false
-    });
-  }
-}
 
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
@@ -280,18 +234,16 @@ chrome.runtime.onMessage.addListener(
       sendResponse({
         runState: currentState
       });
+    } else if (request.action === 'getRunState') {
+      sendResponse({
+        runState: currentState
+      });
+    } else {
+      if (doLog) {
+        console.log('Message to event page was not handled: ', request);
+      }
     }
-  
-else if (request.action === 'getRunState') {
-  sendResponse({
-    runState: currentState
-  });
-} else {
-  if (doLog) {
-    console.log('Message to event page was not handled: ', request);
-  }
-}
 
-return true;
-}
+    return true;
+  }
 );
