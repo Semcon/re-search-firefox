@@ -2,9 +2,11 @@ var currentState = '';
 var currentTerms;
 var currentURL;
 var jsonData;
-var doLog = true;
+var doLog = false;
 var alternateWindow = false;
+var alternateTab = false;
 var originWindow = false;
+var originTab = false;
 
 var DATA_URL = 'https://api.myjson.com/bins/1rq4a';
 
@@ -88,6 +90,14 @@ function showWindows( request, newTerm, windowOriginId ) {
 
                 originWindow = window;
 
+        /*        chrome.tabs.query( {
+                    active: true,
+                    windowId: originWindow.id
+                }, function(tabs) {
+                    console.log('originTab:' , tabs[0].id);
+                    originTab = tabs[0].id;
+                });
+        */
                 chrome.windows.create( {
                     height: parseInt( window.height, 10 ),
                     left: Math.max( 0, parseInt(window.left + (window.width / 2), 10)),
@@ -98,6 +108,17 @@ function showWindows( request, newTerm, windowOriginId ) {
                     width: parseInt( window.width / 2, 10 )
                 }, function( createdWindowData ) {
                     alternateWindow = createdWindowData;
+                    chrome.tabs.query( {
+                        active: true,
+                        windowId: alternateWindow.id
+                    }, function(tabs) {
+
+                        if( doLog ){
+                            console.log('alternate tab ID: ' , tabs[0].id);
+                        }
+
+                        alternateTab = tabs[0].id;
+                    });
                 });
 
                 chrome.windows.update( window.id, {
@@ -113,25 +134,19 @@ function showWindows( request, newTerm, windowOriginId ) {
             }
 
             if( windowOriginId === alternateWindow.id ){
+                 chrome.tabs.query( {
+                     active: true,
+                     windowId: originWindow.id
+                 }, function( tabs ) {
+                     chrome.tabs.update( tabs[0].id, {
+                         url: originLink
+                     });
+                 });
+             }
 
-                chrome.tabs.query( {
-                    active: true,
-                    windowId: originWindow.id
-                }, function(tabs) {
-                    chrome.tabs.update( tabs[0].id, {
-                        url: originLink
-                    });
-                });
-            }
-
-
-            chrome.tabs.query( {
-                active: true,
-                windowId: alternateWindow.id
-            }, function(tabs) {
-                chrome.tabs.update( tabs[0].id, {
-                    url: link
-                });
+            chrome.tabs.update( alternateTab, {
+                url: link,
+                active: true
             });
         }
     }

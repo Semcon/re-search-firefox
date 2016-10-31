@@ -105,6 +105,9 @@
     }
 
     function checkElementMarginTop( element ){
+//        window.test = checkMargin;
+//        setTimeout( checkMargin, 5000 );
+        console.log('margin: ',  window.getComputedStyle(element, null).getPropertyValue("margin-top") );
         if( window.getComputedStyle(element, null).getPropertyValue("margin-top") !== '31px' ){
             setEngineUI();
         }
