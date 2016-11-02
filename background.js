@@ -10,7 +10,9 @@ var originTab = false;
 
 var DATA_URL = 'https://api.myjson.com/bins/1rq4a';
 
-console.log('background is running');
+if( doLog ){
+    console.log('background is running');
+}
 
 //First time running script to check what value runState is in storage.
 //If runState is undefined it is gets set to enabled otherwise it gets the value.
@@ -58,6 +60,23 @@ chrome.windows.onRemoved.addListener(function(windowId) {
   }
 });
 
+chrome.tabs.onRemoved.addListener( function( tabId, removeInfo ){
+    if( tabId === originTab ){
+        originTab = false;
+
+        if( doLog ){
+            console.log( 'originTab was closed' );
+        }
+    }
+
+    if( tabId === alternateTab){
+        alternateTab = false;
+
+        if( doLog ){
+            console.log( 'alternateTab was closed' );
+        }
+    }
+});
 
 var xhr = new XMLHttpRequest();
 xhr.open("GET", DATA_URL, true);
@@ -90,14 +109,17 @@ function showWindows( request, newTerm, windowOriginId ) {
 
                 originWindow = window;
 
-        /*        chrome.tabs.query( {
+                chrome.tabs.query( {
                     active: true,
                     windowId: originWindow.id
                 }, function(tabs) {
-                    console.log('originTab:' , tabs[0].id);
+                    if( doLog ){
+                        console.log('origin tab ID: ' , tabs[0].id);
+                    }
+
                     originTab = tabs[0].id;
                 });
-        */
+
                 chrome.windows.create( {
                     height: parseInt( window.height, 10 ),
                     left: Math.max( 0, parseInt(window.left + (window.width / 2), 10)),
@@ -108,6 +130,7 @@ function showWindows( request, newTerm, windowOriginId ) {
                     width: parseInt( window.width / 2, 10 )
                 }, function( createdWindowData ) {
                     alternateWindow = createdWindowData;
+
                     chrome.tabs.query( {
                         active: true,
                         windowId: alternateWindow.id
@@ -134,20 +157,48 @@ function showWindows( request, newTerm, windowOriginId ) {
             }
 
             if( windowOriginId === alternateWindow.id ){
-                 chrome.tabs.query( {
-                     active: true,
-                     windowId: originWindow.id
-                 }, function( tabs ) {
-                     chrome.tabs.update( tabs[0].id, {
-                         url: originLink
-                     });
-                 });
-             }
+                if( originTab ){
+                    chrome.tabs.update( originTab, {
+                        active: true,
+                        url: originLink
+                    });
+                } else {
+                    chrome.tabs.create( {
+                        active: true,
+                        url: originLink,
+                        windowId: originWindow.id
+                    }, function (tab){
 
-            chrome.tabs.update( alternateTab, {
-                url: link,
-                active: true
-            });
+                        if( doLog ){
+                            console.log('origin tab ID: ', tab.id);
+                        }
+
+                        originTab = tab.id;
+
+                    }  );
+                }
+            }
+            if( alternateTab === false ){
+                chrome.tabs.create( {
+                    active: true,
+                    url: link,
+                    windowId: alternateWindow.id
+                }, function (tab){
+
+                    if( doLog ){
+                        console.log('alternate tab ID: ', tab.id);
+                    }
+
+                    alternateTab = tab.id;
+
+                } );
+            }
+            else{
+                chrome.tabs.update( alternateTab, {
+                    url: link,
+                    active: true
+                });
+            }
         }
     }
     else {
@@ -235,7 +286,6 @@ chrome.runtime.onMessage.addListener(
                 }
 
                 for(var i = 0; i < currentTerms.length; i++ ){
-                    console.log( currentTerms[ i ] );
                     lowercaseTerms = Object.keys( currentTerms[ i ] ).map( function( string ){
                         return string.toLowerCase();
                     });
@@ -264,17 +314,34 @@ chrome.runtime.onMessage.addListener(
 
                 if( alternateWindow !== false ){
                     queryOptions.windowId = originWindow.id
-                } else {
-                    queryOptions.currentWindow = true;
                 }
 
                 if( typeof currentURL !== 'undefined' ){
-                    chrome.tabs.query( queryOptions, function(tabs) {
-                        var newURL = currentURL + request.term;
-                        chrome.tabs.update( tabs[0].id, {
+                    var newURL = currentURL + request.term;
+                    if( originTab ){
+                        chrome.tabs.update( originTab, {
+                            active: true,
                             url: newURL
                         });
-                    });
+                    } else if( alternateWindow === false ){
+                        chrome.tabs.update( sender.tab.id, {
+                            active: true,
+                            url: newURL
+                        });
+                    } else {
+                        queryOptions.url = newURL;
+                        chrome.tabs.create(
+                            queryOptions,
+                            function (tab){
+
+                                if( doLog ){
+                                    console.log('origin tab ID: ', tab.id);
+                                }
+
+                                originTab = tab.id;
+
+                        } );
+                    }
                 }
                 break;
 

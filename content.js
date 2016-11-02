@@ -137,7 +137,8 @@
         setEngineUI();
         var selectList = getSelectList( englishTerms );
         var elmnt = document.querySelectorAll('.tsf-p');
-        //Adapt Google UI
+
+        //Add select list to Google UI
         if(inputSelector === '.gsfi'){
             if(elmnt.length > 0){
                 elmnt[0].appendChild(selectList);
