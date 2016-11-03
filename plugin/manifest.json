@@ -2,9 +2,9 @@
 
   "manifest_version": 2,
   "name": "Image search extension",
-  "version": "1.0",
-
-  "description": "This extension shows a Google Image search result for the current page.",
+  "version": "1.0.1",
+  "id": "{d0064f8d-e9e6-4a60-a712-eab45d195a81}",
+  "description": "This extension shows an alternative result when doing a Google or Bing image search.",
 
   "content_scripts": [
     {
@@ -16,12 +16,12 @@
     "scripts": ["background.js"]
   },
 
-  "permissions": [     
-    "activeTab",     
-    "tabs",     
-    "http://*/*", 
-    "https://*/*",     
-    "storage"   
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "http://*/*",
+    "https://*/*",
+    "storage"
   ],
 
   "browser_action": {
@@ -33,6 +33,3 @@
     }
   }
 }
-
-
-
