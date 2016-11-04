@@ -121,15 +121,18 @@ function showWindows( request, newTerm, windowOriginId ) {
                 });
 
                 chrome.windows.create( {
-                    height: parseInt( window.height, 10 ),
-                    left: Math.max( 0, parseInt(window.left + (window.width / 2), 10)),
                     state: 'normal',
-                    top: Math.max( 0, parseInt( window.top, 10 ) ),
                     type: 'normal',
                     url: link,
-                    width: parseInt( window.width / 2, 10 )
                 }, function( createdWindowData ) {
                     alternateWindow = createdWindowData;
+
+                    chrome.windows.update( alternateWindow.id, {
+                      height: parseInt( window.height, 10 ),
+                      left: Math.max( 0, parseInt(window.left + (window.width / 2), 10)),
+                      top: Math.max( 0, parseInt( window.top, 10 ) ),
+                      width: parseInt( window.width / 2, 10 )
+                    });
 
                     chrome.tabs.query( {
                         active: true,
@@ -145,8 +148,9 @@ function showWindows( request, newTerm, windowOriginId ) {
                 });
 
                 chrome.windows.update( window.id, {
-                    left: Math.max( 0, parseInt( window.left, 10 )),
                     state: 'normal',
+                    left: Math.max( 0, parseInt( window.left, 10 )),
+                    height: Math.max(0, parseInt( window.height, 10 )),
                     top: Math.max( 0, parseInt( window.top, 10 )),
                     width: Math.max( 0, parseInt( window.width / 2, 10 ))
                 });
