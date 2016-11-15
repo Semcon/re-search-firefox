@@ -1,6 +1,8 @@
 {
-
   "manifest_version": 2,
+  "web_accessible_resources": [
+        "icons/*"
+    ],
   "name": "Re-search",
   "version": "1.0.1",
   "id": "{d0064f8d-e9e6-4a60-a712-eab45d195a81}",

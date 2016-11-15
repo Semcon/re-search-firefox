@@ -1,318 +1,338 @@
-var currentState = '';
+var showPopups = true;
+var showBar = true;
+
+var latestTerm = false;
+
 var currentTerms;
 var currentURL;
 var jsonData;
-var doLog = false;
 var alternateWindow = false;
-var alternateTab = false;
+var alternateTabId = false;
 var originWindow = false;
-var originTab = false;
+var originTabId = false;
 
 var DATA_URL = 'https://api.myjson.com/bins/1rq4a';
+var TIP_URL = 'http://example.com';
 
-if( doLog ){
-    console.log('background is running');
-}
-
-//First time running script to check what value runState is in storage.
+//First time running script to check what value runState is in chrome storage.
 //If runState is undefined it is gets set to enabled otherwise it gets the value.
-
-currentState = localStorage.getItem("runState");
-
-if (doLog) {
-  console.log('currentState: ', currentState);
+showPopups = localStorage.getItem("runState");
+if (showPopups === null) {
+      localStorage.setItem('runState', true)
+      showPopups = true;
 }
 
-if (currentState === null) {
-  localStorage.setItem('runState', 'enabled')
-  currentState = 'enabled';
-  if (doLog) {
-    console.log('Saved', 'runState', currentState);
-  }
+showBar = localStorage.getItem("showBar");
+if (showBar === null) {
+      localStorage.setItem('showBar', true)
+      showBar = true;
 }
 
+chrome.windows.onRemoved.addListener( function( windowId ) {
+    if ( windowId === alternateWindow.id ) {
+        chrome.windows.update(originWindow.id, {
+            left: Math.max( 0, parseInt( originWindow.left, 10 )),
+            top: Math.max( 0, parseInt( originWindow.top, 10 )),
+            width: Math.max( 0, parseInt( originWindow.width, 10 )),
+            height: Math.max( 0, parseInt( originWindow.height, 10 )),
+            focused: originWindow.focused
+        });
 
-chrome.windows.onRemoved.addListener(function(windowId) {
-  if (doLog) {
-    console.log('Window removed ID:', windowId);
-  }
+        alternateWindow = false;
+    } else if ( windowId === originWindow.id && alternateWindow.id ){
+        chrome.windows.update( alternateWindow.id, {
+            left: Math.max( 0, parseInt( originWindow.left, 10 )),
+            top: Math.max( 0, parseInt( originWindow.top, 10 )),
+            width: Math.max( 0, parseInt( originWindow.width, 10 )),
+            height: Math.max( 0, parseInt( originWindow.height, 10 )),
+            focused: originWindow.focused
+        });
 
-  if (windowId === alternateWindow.id) {
-      chrome.windows.update(originWindow.id, {
-          left: Math.max( 0, parseInt( originWindow.left, 10 )),
-          top: Math.max( 0, parseInt( originWindow.top, 10 )),
-          width: Math.max( 0, parseInt( originWindow.width, 10 )),
-          height: Math.max( 0, parseInt( originWindow.height, 10 )),
-          focused: originWindow.focused
-      });
-      alternateWindow = false;
-  }
-  else if ( windowId === originWindow.id && alternateWindow.id ){
-      chrome.windows.update( alternateWindow.id, {
-          left: Math.max( 0, parseInt( originWindow.left, 10 )),
-          top: Math.max( 0, parseInt( originWindow.top, 10 )),
-          width: Math.max( 0, parseInt( originWindow.width, 10 )),
-          height: Math.max( 0, parseInt( originWindow.height, 10 )),
-          focused: originWindow.focused
-      });
-
-      alternateWindow = false;
-  }
+        alternateWindow = false;
+    }
 });
 
-chrome.tabs.onRemoved.addListener( function( tabId, removeInfo ){
-    if( tabId === originTab ){
-        originTab = false;
-
-        if( doLog ){
-            console.log( 'originTab was closed' );
-        }
+chrome.tabs.onRemoved.addListener( function( tabId ){
+    if( tabId === originTabId ){
+        originTabId = false;
     }
 
-    if( tabId === alternateTab){
-        alternateTab = false;
-
-        if( doLog ){
-            console.log( 'alternateTab was closed' );
-        }
+    if( tabId === alternateTabId){
+        alternateTabId = false;
     }
 });
 
 var xhr = new XMLHttpRequest();
-xhr.open("GET", DATA_URL, true);
+xhr.open( 'GET', DATA_URL, true );
 xhr.onreadystatechange = function() {
-  if (xhr.readyState === 4 && xhr.status === 200) {
-    jsonData = JSON.parse(xhr.responseText);
-  }
+    if ( xhr.readyState === 4 && xhr.status === 200 ) {
+        jsonData = JSON.parse( xhr.responseText );
+    }
 }
 xhr.send();
 
-
-function showWindows( request, newTerm, windowOriginId ) {
-    if( doLog ){
-        console.log( request.term );
+function sendTip(){
+    var xhr = new XMLHttpRequest();
+    xhr.open( 'POST', TIP_URL, true );
+    xhr.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
+    xhr.onreadystatechange = function() {
+        if ( xhr.readyState === 4 && xhr.status === 200 ) {
+            console.log( 'Tip sent' );
+        }
     }
 
-    if ( typeof currentURL !== 'undefined' ) {
-        var link = currentURL + newTerm;
-        var originLink = currentURL + request.term;
+    xhr.send( 'term=' + latestTerm );
+}
 
-        if (doLog) {
-            console.log('Link: ', link);
-        }
+function showWindows( term, newTerm, windowOriginId ){
+    if( typeof currentURL === 'undefined' ){
+        return false;
+    }
 
-        if( alternateWindow === false ){
-            chrome.windows.getCurrent( {}, function( window ){
-                if( doLog ){
-                    console.log( window );
-                }
+    if( !showPopups ){
+        return false;
+    }
 
-                originWindow = window;
+    var link = currentURL + newTerm;
+    var originLink = currentURL + term;
+
+    if( alternateWindow === false ){
+        chrome.windows.getCurrent( {}, function( window ){
+            originWindow = window;
+
+            chrome.tabs.query( {
+                active: true,
+                windowId: originWindow.id
+            }, function(tabs) {
+                originTabId = tabs[0].id;
+            });
+
+            chrome.windows.create( {
+                state: 'normal',
+                type: 'normal',
+                url: link,
+            }, function( createdWindowData ) {
+                alternateWindow = createdWindowData;
+
+                chrome.windows.update( alternateWindow.id, {
+                    height: parseInt( window.height, 10 ),
+                    left: Math.max( 0, parseInt(window.left + (window.width / 2), 10)),
+                    top: Math.max( 0, parseInt( window.top, 10 ) ),
+                    width: parseInt( window.width / 2, 10 )
+                });
 
                 chrome.tabs.query( {
                     active: true,
-                    windowId: originWindow.id
+                    windowId: alternateWindow.id
                 }, function(tabs) {
-                    if( doLog ){
-                        console.log('origin tab ID: ' , tabs[0].id);
-                    }
-
-                    originTab = tabs[0].id;
-                });
-
-                chrome.windows.create( {
-                    state: 'normal',
-                    type: 'normal',
-                    url: link,
-                }, function( createdWindowData ) {
-                    alternateWindow = createdWindowData;
-
-                    chrome.windows.update( alternateWindow.id, {
-                      height: parseInt( window.height, 10 ),
-                      left: Math.max( 0, parseInt(window.left + (window.width / 2), 10)),
-                      top: Math.max( 0, parseInt( window.top, 10 ) ),
-                      width: parseInt( window.width / 2, 10 )
-                    });
-
-                    chrome.tabs.query( {
-                        active: true,
-                        windowId: alternateWindow.id
-                    }, function(tabs) {
-
-                        if( doLog ){
-                            console.log('alternate tab ID: ' , tabs[0].id);
-                        }
-
-                        alternateTab = tabs[0].id;
-                    });
-                });
-
-                chrome.windows.update( window.id, {
-                    state: 'normal',
-                    left: Math.max( 0, parseInt( window.left, 10 )),
-                    height: Math.max(0, parseInt( window.height, 10 )),
-                    top: Math.max( 0, parseInt( window.top, 10 )),
-                    width: Math.max( 0, parseInt( window.width / 2, 10 ))
+                    alternateTabId = tabs[0].id;
                 });
             });
-        } else {
-            if( doLog ){
-                console.log( 'Should update alternate window' );
-            }
 
-            if( windowOriginId === alternateWindow.id ){
-                if( originTab ){
-                    chrome.tabs.update( originTab, {
-                        active: true,
-                        url: originLink
-                    });
-                } else {
-                    chrome.tabs.create( {
-                        active: true,
-                        url: originLink,
-                        windowId: originWindow.id
-                    }, function (tab){
-
-                        if( doLog ){
-                            console.log('origin tab ID: ', tab.id);
-                        }
-
-                        originTab = tab.id;
-
-                    }  );
-                }
-            }
-            if( alternateTab === false ){
+            chrome.windows.update( window.id, {
+                state: 'normal',
+                left: Math.max( 0, parseInt( window.left, 10 )),
+                height: Math.max(0, parseInt( window.height, 10 )),
+                top: Math.max( 0, parseInt( window.top, 10 )),
+                width: Math.max( 0, parseInt( window.width / 2, 10 ))
+            });
+        });
+    } else {
+        if( windowOriginId === alternateWindow.id ){
+            if( originTabId ){
+                chrome.tabs.update( originTabId, {
+                    active: true,
+                    url: originLink
+                });
+            } else {
                 chrome.tabs.create( {
                     active: true,
-                    url: link,
-                    windowId: alternateWindow.id
-                }, function (tab){
-
-                    if( doLog ){
-                        console.log('alternate tab ID: ', tab.id);
-                    }
-
-                    alternateTab = tab.id;
-
+                    url: originLink,
+                    windowId: originWindow.id
+                }, function (tab) {
+                    originTabId = tab.id;
                 } );
             }
-            else{
-                chrome.tabs.update( alternateTab, {
-                    url: link,
-                    active: true
-                });
-            }
         }
-    }
-    else {
-        if (doLog) {
-            console.log('currentURL and/or currentTerms is undefined');
+
+        if( alternateTabId === false ){
+            chrome.tabs.create( {
+                active: true,
+                url: link,
+                windowId: alternateWindow.id
+            }, function (tab){
+                alternateTabId = tab.id;
+
+            } );
+        } else {
+            chrome.tabs.update( alternateTabId, {
+                url: link,
+                active: true
+            });
         }
     }
 }
 
-function getEngineInformation(request, sender, sendResponse) {
-  //content script is asking for selector
-  var url = request.url;
-  var currentEngine;
+function runToolbarScript(){
+    if( !currentURL ){
+        return false;
+    }
 
-  // Loop over all engines
-  if (typeof jsonData !== 'undefined' && typeof url !== 'undefined') {
-    for (var i = 0; i < jsonData.engines.length; i = i + 1) {
-      var matchCount = 0;
+    if( originTabId ){
+        chrome.tabs.insertCSS( originTabId, {
+            file: '/toolbar/toolbar.css'
+        }, function(){
+            chrome.tabs.executeScript( originTabId, {
+                file: '/toolbar/toolbar.js'
+            });
+        });
+    }
 
-      // Loop over all required matches for the engine
-      for (var matchIndex = 0; matchIndex < jsonData.engines[i].match.length; matchIndex = matchIndex + 1) {
-        if (url.indexOf(jsonData.engines[i].match[matchIndex]) > -1) {
-          // We have a match, increment our counter
-          matchCount = matchCount + 1;
-          if (doLog) {
-            console.log('found match, matchCount: ', matchCount);
-          }
-        }
-      }
+    if( alternateTabId ){
+        chrome.tabs.insertCSS( alternateTabId, {
+            file: '/toolbar/toolbar.css'
+        }, function(){
+            chrome.tabs.executeScript( alternateTabId, {
+                file: '/toolbar/toolbar.js'
+            });
+        });
+    }
 
-      // If we have the same number of matches as required matches we have a valid site
-      if (matchCount === jsonData.engines[i].match.length) {
-        if (doLog) {
-          console.log('Valid site');
-        }
-        currentEngine = jsonData.engines[i];
-        currentTerms = [];
-        for (var key in jsonData.terms[currentEngine.terms]) {
-          currentTerms.push(jsonData.terms[currentEngine.terms][key]);
-        }
-        currentURL = currentEngine.url;
+    if( !originTabId && !alternateTabId ){
+        chrome.tabs.insertCSS({
+            file: '/toolbar/toolbar.css'
+        }, function(){
+            chrome.tabs.executeScript({
+                file: '/toolbar/toolbar.js'
+            });
+        });
+    }
+}
 
-        sendResponse({
-          selectorSearchField: currentEngine.selectors.input,
-          englishTerms: jsonData.terms[currentEngine.terms].eng
+function hasBetterTerm( term ){
+    var lowercaseTerms;
+
+    if( typeof currentTerms === 'undefined' ){
+        return false;
+    }
+
+    term = term.toLowerCase();
+
+    for(var i = 0; i < currentTerms.length; i++ ){
+        lowercaseTerms = Object.keys( currentTerms[ i ] ).map( function( string ){
+            return string.toLowerCase();
         });
 
-        return true;
-      }
+        if( lowercaseTerms.indexOf( term ) > -1 ){
+            return currentTerms[ i ][ Object.keys( currentTerms[ i ] )[ lowercaseTerms.indexOf( term ) ] ];
+        }
     }
 
-    if (doLog) {
-      console.log('If not valid site, Url:', url);
-    }
-    sendResponse({
-      selectorSearchField: false
-    });
-  }
+    return false;
 }
 
+function getEngine( url ){
+    if( typeof jsonData === 'undefined' ) {
+        return false;
+    }
+
+    if( typeof url === 'undefined' ){
+        return false;
+    }
+
+    for( var i = 0; i < jsonData.engines.length; i = i + 1 ){
+        var matchCount = 0;
+
+        // Loop over all required matches for the engine
+        for( var matchIndex = 0; matchIndex < jsonData.engines[ i ].match.length; matchIndex = matchIndex + 1 ){
+            if( url.indexOf( jsonData.engines[ i ].match[ matchIndex ] ) > -1 ){
+                // We have a match, increment our counter
+                matchCount = matchCount + 1;
+            }
+        }
+
+        // If we have the same number of matches as required matches we have a valid site
+        if( matchCount === jsonData.engines[ i ].match.length ){
+            return jsonData.engines[ i ];
+        }
+    }
+
+    return false;
+}
+
+function isValidUrl( url ){
+    if( !getEngine( url ) ){
+        return false;
+    }
+
+    return true;
+}
+
+function getEngineInformation( sender, sendResponse ){
+    var currentEngine = getEngine( sender.url );
+
+    if( !currentEngine ){
+        sendResponse({
+            selectorSearchField: false
+        });
+
+        return false;
+    }
+
+    currentTerms = [];
+    for ( var key in jsonData.terms[ currentEngine.terms ] ){
+        currentTerms.push( jsonData.terms[ currentEngine.terms ][ key ] );
+    }
+
+    currentURL = currentEngine.url;
+    englishTerms = jsonData.terms[ currentEngine.terms ].eng;
+
+    runToolbarScript();
+
+    sendResponse({
+        selectorSearchField: currentEngine.selectors.input
+    });
+
+    return true;
+}
 
 chrome.runtime.onMessage.addListener(
-  function(request, sender, sendResponse) {
-      var queryOptions = {};
+    function( request, sender, sendResponse ) {
+        var queryOptions = {};
+        var betterTerm = false;
 
-      switch(request.action){
+        switch( request.action ){
+            case 'getEngineInformation':
+                getEngineInformation( sender, sendResponse );
 
-        case 'getEngineInformation':
-                getEngineInformation( request, sender, sendResponse );
                 break;
-
-        case 'searchForTerm':
-            var termStatus = 'term not found';
-            var lowercaseTerms;
-
-            if( doLog ){
-                console.log( 'Using term: ', request.term.toLowerCase() );
-            }
-
-            request.term = request.term.toLowerCase();
-
-            if(typeof currentTerms !== 'undefined'){
-                if( doLog ){
-                    console.log('currentTerms is defined');
-                }
-
-                for(var i = 0; i < currentTerms.length; i++ ){
-                    lowercaseTerms = Object.keys( currentTerms[ i ] ).map( function( string ){
-                        return string.toLowerCase();
-                    });
-
-                    if( lowercaseTerms.indexOf( request.term ) > -1 ){
-                        if( doLog ){
-                            console.log('term is found', request);
-                        }
-
-                        termStatus = 'term was found';
-
-                        showWindows( request, currentTerms[ i ][ Object.keys( currentTerms[ i ] )[ lowercaseTerms.indexOf( request.term ) ] ], sender.tab.windowId );
-
-                        break;
-                    }
-                }
-
+            case 'getEnglishTerms':
                 sendResponse({
-                    status: termStatus
+                    englishTerms: englishTerms
                 });
-            }
-            break;
 
+                break;
+            case 'isValidUrl':
+                if( isValidUrl( sender.url ) ){
+                    sendResponse({
+                        valid: true
+                    });
+                } else {
+                    sendResponse({
+                        valid: false
+                    });
+                }
+
+                break;
+            case 'searchForTerm':
+                latestTerm = request.term;
+                betterTerm = hasBetterTerm( request.term );
+
+                if( betterTerm ){
+                    showWindows( request.term, betterTerm, sender.tab.windowId );
+                };
+
+                break;
             case 'updateTabURL':
                 queryOptions.active = true;
 
@@ -322,8 +342,8 @@ chrome.runtime.onMessage.addListener(
 
                 if( typeof currentURL !== 'undefined' ){
                     var newURL = currentURL + request.term;
-                    if( originTab ){
-                        chrome.tabs.update( originTab, {
+                    if( originTabId ){
+                        chrome.tabs.update( originTabId, {
                             active: true,
                             url: newURL
                         });
@@ -336,74 +356,118 @@ chrome.runtime.onMessage.addListener(
                         queryOptions.url = newURL;
                         chrome.tabs.create(
                             queryOptions,
-                            function (tab){
-
-                                if( doLog ){
-                                    console.log('origin tab ID: ', tab.id);
-                                }
-
-                                originTab = tab.id;
-
-                        } );
+                            function ( tab ) {
+                                originTabId = tab.id;
+                            }
+                        );
                     }
                 }
-                break;
 
+                break;
             case 'getRunState':
-                sendResponse({
-                    runState: currentState
+                chrome.tabs.sendMessage( sender.tab.id, {
+                    runState: showPopups
                 });
+
                 break;
+            case 'disablePopups':
+                showPopups = false;
 
-            case 'changeRunState':
-                if (doLog) {
-                    console.log('ChangeRunState from popup / current value is: ', currentState);
+                chrome.storage.sync.set({ runState: showPopups });
+
+                if( originTabId ){
+                    chrome.tabs.sendMessage( originTabId, {
+                        action: 'stateChanged',
+                        runState: showPopups
+                    } );
                 }
 
-                if (currentState === 'enabled') {
-                    currentState = 'disabled';
-                } else {
-                    currentState = 'enabled';
+                if( alternateTabId ){
+                    chrome.tabs.sendMessage( alternateTabId, {
+                        action: 'stateChanged',
+                        runState: showPopups
+                    } );
                 }
 
-                localStorage.setItem('runState', currentState);
-                if (doLog) {
-                    console.log('Saved', 'runState', currentState);
+                if( sender.tab.id !== originTabId && sender.tab.id !== alternateTabId ){
+                    chrome.tabs.sendMessage( sender.tab.id, {
+                        action: 'stateChanged',
+                        runState: showPopups
+                    } );
                 }
 
-
-                chrome.tabs.query({
-                    active: true,
-                    currentWindow: true
-                }, function(tabs) {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        action: 'changeRunState',
-                        runState: currentState
-                    }, function(response) {
-                        if (response) {
-                            if (doLog) {
-                                console.log(response.message);
-                            }
-                        } else {
-                            if (doLog) {
-                                console.log('Content script not injected');
-                            }
-                        }
-                    });
-                });
-
-                sendResponse({
-                    runState: currentState
-                });
                 break;
+            case 'enablePopups':
+                showPopups = true;
 
+                chrome.storage.sync.set({ runState: showPopups });
+
+                if( originTabId ){
+                    chrome.tabs.sendMessage( originTabId, {
+                        action: 'stateChanged',
+                        runState: showPopups
+                    } );
+                }
+
+                if( alternateTabId ){
+                    chrome.tabs.sendMessage( alternateTabId, {
+                        action: 'stateChanged',
+                        runState: showPopups
+                    } );
+                }
+
+                if( sender.tab.id !== originTabId && sender.tab.id !== alternateTabId ){
+                    chrome.tabs.sendMessage( sender.tab.id, {
+                        action: 'stateChanged',
+                        runState: showPopups
+                    } );
+                }
+
+                break;
+            case 'getLatestTerm':
+                sendResponse({
+                    latestTerm: latestTerm
+                });
+
+                break;
+            case 'sendTip':
+                sendTip();
+
+                break;
+            case 'addToolbar':
+                runToolbarScript();
+
+                break;
+            case 'getToolbarStatus':
+                sendResponse({
+                    showBar: showBar
+                });
+
+                break;
+            case 'enableToolbar':
+                showBar = true;
+
+                chrome.storage.sync.set({ showBar: showBar },
+                    function () {
+                        runToolbarScript();
+                    }
+                );
+
+                break;
+            case 'disableToolbar':
+                showBar = false;
+
+                chrome.storage.sync.set({ showBar: showBar },
+                    function () {
+                        runToolbarScript();
+                    }
+                );
+
+                break;
             default:
-                if (doLog) {
-                    console.log('Message to event page was not handled: ', request);
-                }
+                console.log( 'Message to event page was not handled: ', request );
+        }
 
-      }
-
-      return true;
-  }
+        return true;
+    }
 );
