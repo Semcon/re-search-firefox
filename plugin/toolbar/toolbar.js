@@ -252,7 +252,7 @@
 
     function addListeners(){
         window.addEventListener( 'click', function( event ){
-            if( event.target.classList.contains( 're-search-on-off-text'  || event.target.classList.contains( 're-search-on-off-paddle' ) ) ){
+            if( event.target.classList.contains( 're-search-on-off-text' ) || event.target.classList.contains( 're-search-on-off-paddle' ) ){
                 if( document.querySelector( '.re-search-on-off-toggle' ).classList.contains( 'active' ) ){
                     chrome.runtime.sendMessage({
                         action: 'disablePopups'
