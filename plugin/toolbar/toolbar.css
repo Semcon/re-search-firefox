@@ -137,15 +137,22 @@ a.re-search-on-off-text:hover {
 }
 
 a.re-search-hide-button {
-    color: #73D791;
     border: 0;
+    color: #73D791;
     float: right;
     font-size: 50px;
     font-weight: 100;
     margin-right: 15px;
+    position: relative;
+    top: -3px;
 }
 
 a.re-search-hide-button:hover {
     border: 0;
     cursor: pointer;
+}
+
+.re-search-hide-button img {
+    height: 32px;
+    width: 32px;
 }
