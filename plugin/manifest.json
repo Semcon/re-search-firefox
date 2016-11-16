@@ -4,7 +4,7 @@
         "icons/*"
     ],
   "name": "Re-search",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "id": "{d0064f8d-e9e6-4a60-a712-eab45d195a81}",
   "description": "This extension shows an alternative result when doing a Google or Bing image search.",
 
