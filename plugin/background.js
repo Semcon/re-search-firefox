@@ -447,21 +447,15 @@ chrome.runtime.onMessage.addListener(
             case 'enableToolbar':
                 showBar = true;
 
-                chrome.storage.sync.set({ showBar: showBar },
-                    function () {
-                        runToolbarScript();
-                    }
-                );
+                localStorage.setItem( 'showBar',  showBar );
+                runToolbarScript();
 
                 break;
             case 'disableToolbar':
                 showBar = false;
 
-                chrome.storage.sync.set({ showBar: showBar },
-                    function () {
-                        runToolbarScript();
-                    }
-                );
+                localStorage.setItem( 'showBar',  showBar );
+                runToolbarScript();
 
                 break;
             default:
