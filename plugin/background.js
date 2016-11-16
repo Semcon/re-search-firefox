@@ -373,7 +373,7 @@ chrome.runtime.onMessage.addListener(
             case 'disablePopups':
                 showPopups = false;
 
-                chrome.storage.sync.set({ runState: showPopups });
+                localStorage.setItem( 'runState', showPopups );
 
                 if( originTabId ){
                     chrome.tabs.sendMessage( originTabId, {
@@ -400,7 +400,7 @@ chrome.runtime.onMessage.addListener(
             case 'enablePopups':
                 showPopups = true;
 
-                chrome.storage.sync.set({ runState: showPopups });
+                localStorage.setItem( 'runState', showPopups );
 
                 if( originTabId ){
                     chrome.tabs.sendMessage( originTabId, {
