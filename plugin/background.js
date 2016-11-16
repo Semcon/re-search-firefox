@@ -434,10 +434,6 @@ chrome.runtime.onMessage.addListener(
                 sendTip();
 
                 break;
-            case 'addToolbar':
-                runToolbarScript();
-
-                break;
             case 'getToolbarStatus':
                 sendResponse({
                     showBar: showBar
