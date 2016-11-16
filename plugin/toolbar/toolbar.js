@@ -156,11 +156,11 @@
         onOffPaddle.className = 're-search-on-off-paddle';
 
         var onText = document.createElement( 'a' );
-        onText.className = 're-search-on-off-text';
+        onText.className = 're-search-on-off-text re-search-on-text';
         onText.innerText = 'On';
 
         var offText = document.createElement( 'a' );
-        offText.className = 're-search-on-off-text';
+        offText.className = 're-search-on-off-text re-search-off-text';
         offText.innerText = 'Off';
 
         onOffToggle.appendChild( onOffPaddle );
@@ -238,7 +238,7 @@
         document.querySelector( '.re-search-read-more-button' ).classList.add( 're-search-hidden' );
         document.querySelector( '.re-search-on-off-toggle' ).classList.add( 're-search-hidden' );
         document.querySelector( '.re-search-hide-button' ).classList.add( 're-search-hidden' );
-        
+
         chrome.runtime.sendMessage({
             action: 'getLatestTerm'
         }, function( response ){
@@ -252,7 +252,7 @@
 
     function addListeners(){
         window.addEventListener( 'click', function( event ){
-            if( event.target.classList.contains( 're-search-on-off-text' ) ){
+            if( event.target.classList.contains( 're-search-on-off-text'  || event.target.classList.contains( 're-search-on-off-paddle' ) ) ){
                 if( document.querySelector( '.re-search-on-off-toggle' ).classList.contains( 'active' ) ){
                     chrome.runtime.sendMessage({
                         action: 'disablePopups'
