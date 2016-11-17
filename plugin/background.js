@@ -266,7 +266,7 @@ function getEngineInformation( sender, sendResponse ){
         return false;
     }
 
-    currentTerms = [];
+    currentTerms = {};
     dropdownTerms = [];
     for ( var key in jsonData.terms[ currentEngine.terms ] ){
         currentTerms[ key ] = jsonData.terms[ currentEngine.terms ][ key ].updated;
