@@ -22,24 +22,25 @@ if (showBar === null) {
 }
 
 chrome.windows.onRemoved.addListener( function( windowId ) {
+    var updateProperties = {
+        left: parseInt( originWindow.left, 10 ),
+        top: parseInt( originWindow.top, 10 ),
+        width: parseInt( originWindow.width, 10 ),
+        height: parseInt( originWindow.height, 10 ),
+        focused: originWindow.focused
+    };
+
+    if( !supportsLessThanZero() ){
+        updateProperties.left = Math.max( 0, updateProperties.left );
+        updateProperties.top = Math.max( 0, updateProperties.top );
+    }
+
     if ( windowId === alternateWindow.id ) {
-        chrome.windows.update(originWindow.id, {
-            left: Math.max( 0, parseInt( originWindow.left, 10 )),
-            top: Math.max( 0, parseInt( originWindow.top, 10 )),
-            width: Math.max( 0, parseInt( originWindow.width, 10 )),
-            height: Math.max( 0, parseInt( originWindow.height, 10 )),
-            focused: originWindow.focused
-        });
+        chrome.windows.update( originWindow.id, updateProperties );
 
         alternateWindow = false;
     } else if ( windowId === originWindow.id && alternateWindow.id ){
-        chrome.windows.update( alternateWindow.id, {
-            left: Math.max( 0, parseInt( originWindow.left, 10 )),
-            top: Math.max( 0, parseInt( originWindow.top, 10 )),
-            width: Math.max( 0, parseInt( originWindow.width, 10 )),
-            height: Math.max( 0, parseInt( originWindow.height, 10 )),
-            focused: originWindow.focused
-        });
+        chrome.windows.update( alternateWindow.id, updateProperties );
 
         alternateWindow = false;
     }
@@ -63,6 +64,17 @@ xhr.onreadystatechange = function() {
     }
 }
 xhr.send();
+
+function supportsLessThanZero(){
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=1279562
+    var verisonLowerThan50 = /Firefox\/4/.test( navigator.userAgent );
+
+    if( verisonLowerThan50 ){
+        return false;
+    }
+
+    return true;
+}
 
 function sendTip(){
     var xhr = new XMLHttpRequest();
@@ -102,13 +114,19 @@ function showWindows( term, newTerm, windowOriginId ){
                 url: link,
             }, function( createdWindowData ) {
                 alternateWindow = createdWindowData;
-
-                chrome.windows.update( alternateWindow.id, {
+                var newWindowProperties = {
                     height: parseInt( window.height, 10 ),
-                    left: Math.max( 0, parseInt(window.left + (window.width / 2), 10)),
-                    top: Math.max( 0, parseInt( window.top, 10 ) ),
+                    left: parseInt( window.left + ( window.width / 2 ), 10 ),
+                    top: parseInt( window.top, 10 ),
                     width: parseInt( window.width / 2, 10 )
-                });
+                };
+
+                if( !supportsLessThanZero() ){
+                    newWindowProperties.left = Math.max( 0, newWindowProperties.left );
+                    newWindowProperties.top = Math.max( 0, newWindowProperties.top );
+                }
+
+                chrome.windows.update( alternateWindow.id, newWindowProperties );
 
                 chrome.tabs.query( {
                     active: true,
@@ -118,13 +136,20 @@ function showWindows( term, newTerm, windowOriginId ){
                 });
             });
 
-            chrome.windows.update( window.id, {
+            var currentWindowUpdatedProperties = {
                 state: 'normal',
-                left: Math.max( 0, parseInt( window.left, 10 )),
-                height: Math.max(0, parseInt( window.height, 10 )),
-                top: Math.max( 0, parseInt( window.top, 10 )),
-                width: Math.max( 0, parseInt( window.width / 2, 10 ))
-            });
+                left: parseInt( window.left, 10 ),
+                height: parseInt( window.height, 10 ),
+                top: parseInt( window.top, 10 ),
+                width: parseInt( window.width / 2, 10 )
+            };
+
+            if( !supportsLessThanZero() ){
+                currentWindowUpdatedProperties.left = Math.max( 0, currentWindowUpdatedProperties.left );
+                currentWindowUpdatedProperties.top = Math.max( 0, currentWindowUpdatedProperties.top );
+            }
+
+            chrome.windows.update( window.id, currentWindowUpdatedProperties );
         });
     } else {
         if( windowOriginId === alternateWindow.id ){
