@@ -23,17 +23,24 @@ if (showBar === null) {
 
 chrome.windows.onRemoved.addListener( function( windowId ) {
     var updateProperties = {
-        left: parseInt( originWindow.left, 10 ),
-        top: parseInt( originWindow.top, 10 ),
-        width: parseInt( originWindow.width, 10 ),
-        height: parseInt( originWindow.height, 10 ),
         focused: originWindow.focused
     };
 
-    if( !supportsLessThanZero() ){
-        updateProperties.left = Math.max( 0, updateProperties.left );
-        updateProperties.top = Math.max( 0, updateProperties.top );
-    }
+    if( originWindow.state === 'minimized' || originWindow.state === 'maximized' || originWindow.state === 'fullscreen' ){
+        updateProperties.state = originWindow.state;
+    } else {
+        updateProperties = {
+            left: parseInt( originWindow.left, 10 ),
+            top: parseInt( originWindow.top, 10 ),
+            width: parseInt( originWindow.width, 10 ),
+            height: parseInt( originWindow.height, 10 )
+        }
+
+        if( !supportsLessThanZero() ){
+            updateProperties.left = Math.max( 0, updateProperties.left );
+            updateProperties.top = Math.max( 0, updateProperties.top );
+        }
+    };
 
     if ( windowId === alternateWindow.id ) {
         chrome.windows.update( originWindow.id, updateProperties );
