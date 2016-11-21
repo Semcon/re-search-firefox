@@ -388,8 +388,10 @@ chrome.runtime.onMessage.addListener(
 
                 break;
             case 'getLatestTerm':
-                sendResponse({
-                    latestTerm: latestTerm
+                chrome.tabs.sendMessage( sender.tab.id, { action: 'getTerm' }, function( response ){
+                    sendResponse({
+                        latestTerm: response
+                    });
                 });
 
                 break;

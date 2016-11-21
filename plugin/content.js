@@ -14,6 +14,10 @@
             return false;
         }
 
+        if( !term ){
+            return false;
+        }
+
         lastSentTerm = term;
 
         chrome.runtime.sendMessage({
@@ -46,7 +50,7 @@
         setInterval( getTitle, 64 );
 
         window.addEventListener( 'term', function(){
-            getSearchTerm();
+            sendTerm( getSearchTerm() );
         });
     }
 
@@ -60,8 +64,10 @@
 
         var element = elements[ 0 ];
         if( element.value.length > 0 ){
-            sendTerm( element.value );
+            return element.value;
         }
+
+        return false;
     }
 
     function init(){
@@ -72,7 +78,7 @@
 
         titleTerm = document.getElementsByTagName( 'title' )[ 0 ].textContent;
         addListeners();
-        getSearchTerm();
+        sendTerm( getSearchTerm() );
     }
 
     chrome.runtime.sendMessage({
@@ -82,6 +88,13 @@
             inputSelector = response.selectorSearchField;
 
             init();
+        }
+    });
+
+    chrome.runtime.onMessage.addListener( function( request, sender, response ){
+        console.log( 'got messagwe' );
+        if( request.action === 'getTerm' ){
+            response( getSearchTerm() );
         }
     });
 })();
