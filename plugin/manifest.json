@@ -3,16 +3,13 @@
     "name": "Re-search",
     "id": "{d0064f8d-e9e6-4a60-a712-eab45d195a81}",
     "version": "1.1.0",
-
     "description": "This extension shows an alternative result when doing a Google or Bing image search.",
-
     "applications": {
         "gecko": {
             "id": "{d0064f8d-e9e6-4a60-a712-eab45d195a81}",
             "strict_min_version": "48.0"
         }
     },
-
     "web_accessible_resources": [
         "icons/*"
     ],
@@ -26,16 +23,15 @@
     },
     "content_scripts": [
         {
-          "matches": [
-              "http://*/*",
-              "https://*/*"
-          ],
-          "js": [
-              "content.js"
-          ]
+            "matches": [
+                "http://*/*",
+                "https://*/*"
+            ],
+            "js": [
+                "content.js"
+            ]
         }
     ],
-
     "permissions": [
         "activeTab",
         "tabs",
@@ -43,7 +39,6 @@
         "https://*/*",
         "storage"
     ],
-
     "background": {
         "scripts": [
             "background.js"
