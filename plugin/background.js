@@ -40,7 +40,7 @@ chrome.windows.onRemoved.addListener( function( windowId ) {
             updateProperties.left = Math.max( 0, updateProperties.left );
             updateProperties.top = Math.max( 0, updateProperties.top );
         }
-    };
+    }
 
     if ( windowId === alternateWindow.id ) {
         chrome.windows.update( originWindow.id, updateProperties );
@@ -74,7 +74,7 @@ xhr.send();
 
 function supportsLessThanZero(){
     // https://bugzilla.mozilla.org/show_bug.cgi?id=1279562
-    var verisonLowerThan50 = /Firefox\/4/.test( navigator.userAgent );
+    var verisonLowerThan50 = ( /Firefox\/4/ ).test( navigator.userAgent );
 
     if( verisonLowerThan50 ){
         return false;
@@ -118,7 +118,7 @@ function showWindows( term, newTerm, windowOriginId ){
             chrome.windows.create( {
                 state: 'normal',
                 type: 'normal',
-                url: link,
+                url: link
             }, function( createdWindowData ) {
                 alternateWindow = createdWindowData;
                 var newWindowProperties = {
@@ -353,7 +353,7 @@ chrome.runtime.onMessage.addListener(
 
                 if( betterTerm ){
                     showWindows( request.term, betterTerm, sender.tab.windowId );
-                };
+                }
 
                 break;
             case 'updateTabURL':
@@ -408,14 +408,14 @@ chrome.runtime.onMessage.addListener(
             case 'enableToolbar':
                 showBar = true;
 
-                localStorage.setItem( 'showBar',  showBar );
+                localStorage.setItem( 'showBar', showBar );
                 runToolbarScript();
 
                 break;
             case 'disableToolbar':
                 showBar = false;
 
-                localStorage.setItem( 'showBar',  showBar );
+                localStorage.setItem( 'showBar', showBar );
                 runToolbarScript();
 
                 break;
