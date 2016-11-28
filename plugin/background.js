@@ -37,6 +37,7 @@ var originTabId = false;
 
 var DATA_URL = 'https://raw.githubusercontent.com/Semcon/re-search-config/master/data.json';
 var TIP_URL = 'http://semcon.com/re-search-tip/';
+var TERM_UPDATE_INTERVAL = 3600000;
 
 //First time running script to check what value showBar is in storage.
 showBar = localStorage.getItem("showBar");
@@ -100,7 +101,7 @@ function loadTerms(){
 }
 
 loadTerms();
-setInterval( loadTerms, 21600000 );
+setInterval( loadTerms, TERM_UPDATE_INTERVAL );
 
 function supportsLessThanZero(){
     // https://bugzilla.mozilla.org/show_bug.cgi?id=1279562
